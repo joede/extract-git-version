@@ -23,17 +23,24 @@ verbose = False
 beta_re = re.compile("[rvRV]?([0-9]+)\.([0-9]+)_([a-zA-Z0-9]+)-([0-9]+)-(.*)")
 final_re = re.compile("[rvRV]?([0-9]+)\.([0-9]+)-([0-9]+)-(.*)")
 
-def extract_version():
+def extract_version(curr_path):
+    git_base = ".git"
     major = 0
     minor = 0
     git_behind = 0
     git_ref = ""
     beta_tag = ""
-    if isdir('.git'):
+    if curr_path != "":
+        git_base = curr_path + "/.git"
+
+    if isdir(git_base):
         # Get the version using "git describe".
-        cmd = 'git describe --tags --always --dirty --long'
-	if verbose:
-	    print "info: call:",cmd
+        if curr_path != "":
+            cmd = "git -C " + curr_path + " describe --tags --always --dirty --long"
+        else:
+            cmd = "git describe --tags --always --dirty --long"
+        if verbose:
+            print "info: call:",cmd
         try:
             #version = check_output(cmd.split()).decode().strip()[len(PREFIX):]
             version = check_output(cmd.split())
@@ -57,6 +64,8 @@ def extract_version():
                 git_ref = m.group(4)
                 beta_tag = ""
     else:
+        if verbose and (curr_path!=""):
+            print "info: used working dir:",git_base
         raise RuntimeError('no git root found!')
 
     return [major,minor,beta_tag,git_behind,git_ref]
@@ -75,6 +84,8 @@ def main():
                           default=False, help="only show minor number")
     opt_parser.add_option("-b", "--beta", action="store_true", dest="want_beta",
                           default=False, help="only show beta / build string")
+    opt_parser.add_option("-C", "--current", dest="curr_path",
+                          default="", help="path to current working directoy (with .git directory).")
 
     # parse the options and set the global verbose flag too
     (options, args) = opt_parser.parse_args()
@@ -82,7 +93,7 @@ def main():
 
     # OK, let's do our job
     try:
-	v = extract_version()
+	v = extract_version(options.curr_path)
     except:
         print "fatal: something strange happened..."
         return 1
