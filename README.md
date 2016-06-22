@@ -5,19 +5,22 @@ the git repository. The output of the script can be used inside a shell script
 or inside a Makefile. In this way, the version information is used without
 changing the source or any other temporary file.
 
-The tag must be either "major.minor_beta" or "major.minor". The fields 'major'
-and 'minor' must be numbers. This version can have a prefix "v" or "V" or even
-"r" or "R". If such a prefix is detected, it will be stripped.
+The tag must be either "major.minor_beta", "major.minor", "major.minor.patch_beta"
+or "major.minor.patch". The fields 'major', 'minor' and 'patch' must be numbers.
+This version can have a prefix "v" or "V" or even "r" or "R". If such a prefix
+is detected, it will be stripped.
 
 The field 'beta' can consist of letters and digits. This field can be used as
-"beta marker" (beta11) or as patch (p123) or build level (B123 or 4711).
+"beta marker" (beta11) or build level (B123 or 4711).
 
 The following tags will be recognized by the script:
 * `v1.0` -- major=1 minor=0
 * `V1.2` -- major=1 minor=2
+* `v1.2.3` -- major=1 minor=0 patchlevel=3
 * `r2.3` -- major=2 minor=3
 * `1.1` -- major=1 minor=1
 * `v1.1_beta2` -- major=1 minor=1 beta="beta2"
+* `v1.1.2_beta11` -- major=1 minor=1 patchlevel=2 beta="beta11"
 
 If no matching tag is found, the numerical fields of the version
 are set to 0 and the strings are cleared (empty).
@@ -51,10 +54,11 @@ change the amount and format of the displayed information. Call the script with
 
 The following options are important:
 
-* `-a`, `--all`      -- show all values delimited by a colon. Use `cut` to parse the values in Makefiles.
-* `-M`, `--major`    -- only show major number
-* `-m`, `--minor`    -- only show minor number
-* `-b`, `--beta`     -- only show beta / build string
+* `-a`, `--all`        -- show all values delimited by a colon. Use `cut` to parse the values in Makefiles.
+* `-M`, `--major`      -- only show major number
+* `-m`, `--minor`      -- only show minor number
+* `-p`, `--patchlevel` -- only show patchlevel number
+* `-b`, `--beta`       -- only show beta / build string
 
 Without options, all details are presented as string.
 
@@ -65,7 +69,7 @@ v1.6-0-gb00c2de
 $ extract-version.py
 1.6 (0:gb00c2de)
 $ extract-version.py --all
-1:6::0:gb00c2de
+1:6:::0:gb00c2de
 $ extract-version.py --major
 1
 $ extract-version.py --minor
@@ -79,11 +83,29 @@ v1.6_beta3-0-gb00c2de
 $ extract-version.py
 1.6-beta3 (0:gb00c2de)
 $ extract-version.py --all
-1:6:beta3:0:gb00c2de
+1:6::beta3:0:gb00c2de
 $ extract-version.py --major
 1
 $ extract-version.py --minor
 6
 $ extract-version.py --beta
 beta3
+~~~~
+
+**Sample:** a project with three parted version and *beta tag*
+~~~~
+$ git describe --tags --always --dirty --long
+v1.2.3_beta47-0-gb00c2de
+$ extract-version.py
+1.2.3-beta47 (0:gb00c2de)
+$ extract-version.py --all
+1:2:3:beta47:0:gb00c2de
+$ extract-version.py --major
+1
+$ extract-version.py --minor
+2
+$ extract-version.py --patchlevel
+3
+$ extract-version.py --beta
+beta47
 ~~~~
