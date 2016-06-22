@@ -75,6 +75,7 @@ def extract_version(curr_path,verbose):
                 if m != None:
                     major = m.group(1)
                     minor = m.group(2)
+                    patchlvl = ""
                     beta_tag = m.group(3)
                     git_behind = m.group(4)
                     git_ref = m.group(5)
@@ -83,6 +84,7 @@ def extract_version(curr_path,verbose):
                     if m != None:
                         major = m.group(1)
                         minor = m.group(2)
+                        patchlvl = ""
                         git_behind = m.group(3)
                         git_ref = m.group(4)
     else:
