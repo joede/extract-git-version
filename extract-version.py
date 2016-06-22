@@ -5,11 +5,11 @@
 # License: GPL v3.0
 #
 # Script to extract a version information out of the tags of the
-# git repository. The tag must be either "major.minor_beta" or
-# "major.minor". The fields 'major' and 'minor' must be numbers.
+# git repository. The tag must be either "major.minor_beta", "major.minor",
+# "major.minor.patch_beta" or "major.minor.patch".
+# The fields 'major', 'minor' and 'patch' must be numbers.
 # The field 'beta' can consist of letters and digits. This field
-# can be used as "beta marker" (beta11) or as patch (p123) or build
-# level (B123 or 4711).
+# can be used as "beta marker" (beta11) or build level (B123 or 4711).
 #
 # If no matching tag is found, the numerical fields of the version
 # are set to 0 and the strings are cleared (empty).
@@ -22,12 +22,15 @@ import re
 verbose = False
 beta_re = re.compile("[rvRV]?([0-9]+)\.([0-9]+)_([a-zA-Z0-9]+)-([0-9]+)-(.*)")
 final_re = re.compile("[rvRV]?([0-9]+)\.([0-9]+)-([0-9]+)-(.*)")
+beta_re3 = re.compile("[rvRV]?([0-9]+)\.([0-9]+)\.([0-9]+)_([a-zA-Z0-9]+)-([0-9]+)-(.*)")
+final_re3 = re.compile("[rvRV]?([0-9]+)\.([0-9]+)\.([0-9]+)-([0-9]+)-(.*)")
 
 def extract_version(curr_path):
     git_base = ".git"
-    major = 0
-    minor = 0
-    git_behind = 0
+    major = ""
+    minor = ""
+    patchlvl = ""
+    git_behind = ""
     git_ref = ""
     beta_tag = ""
     if curr_path != "":
@@ -48,27 +51,43 @@ def extract_version(curr_path):
                 print "info: git returned",version
         except CalledProcessError:
             raise RuntimeError("error: can't get tags from git")
-        m = beta_re.match(version)
+        m = beta_re3.match(version)
         if m != None:
             major = m.group(1)
             minor = m.group(2)
-            beta_tag = m.group(3)
-            git_behind = m.group(4)
-            git_ref = m.group(5)
+            patchlvl = m.group(3)
+            beta_tag = m.group(4)
+            git_behind = m.group(5)
+            git_ref = m.group(6)
         else:
-            m = final_re.match(version)
+            m = final_re3.match(version)
             if m != None:
                 major = m.group(1)
                 minor = m.group(2)
-                git_behind = m.group(3)
-                git_ref = m.group(4)
-                beta_tag = ""
+                patchlvl = m.group(3)
+                git_behind = m.group(4)
+                git_ref = m.group(5)
+            else:
+                m = beta_re.match(version)
+                if m != None:
+                    major = m.group(1)
+                    minor = m.group(2)
+                    beta_tag = m.group(3)
+                    git_behind = m.group(4)
+                    git_ref = m.group(5)
+                else:
+                    m = final_re.match(version)
+                    if m != None:
+                        major = m.group(1)
+                        minor = m.group(2)
+                        git_behind = m.group(3)
+                        git_ref = m.group(4)
     else:
         if verbose and (curr_path!=""):
             print "info: used working dir:",git_base
         raise RuntimeError('no git root found!')
 
-    return [major,minor,beta_tag,git_behind,git_ref]
+    return [major,minor,patchlvl,beta_tag,git_behind,git_ref]
 
 
 def main():
@@ -82,6 +101,8 @@ def main():
                           default=False, help="only show major number")
     opt_parser.add_option("-m", "--minor", action="store_true", dest="want_minor",
                           default=False, help="only show minor number")
+    opt_parser.add_option("-p", "--patchlevel", action="store_true", dest="want_patchlevel",
+                          default=False, help="only show patchlevel number")
     opt_parser.add_option("-b", "--beta", action="store_true", dest="want_beta",
                           default=False, help="only show beta / build string")
     opt_parser.add_option("-C", "--current", dest="curr_path",
@@ -103,21 +124,28 @@ def main():
         print "result of version query: ",v
     if options.want_all:
         # all values parsable delimited by a colon
-        print "%s:%s:%s:%s:%s" % (v[0],v[1],v[2],v[3],v[4])
+        print "%s:%s:%s:%s:%s:%s" % (v[0],v[1],v[2],v[3],v[4],v[5])
     elif options.want_major:
         print v[0]
     elif options.want_minor:
         print v[1]
-    elif options.want_beta:
+    elif options.want_patchlevel:
         print v[2]
+    elif options.want_beta:
+        print v[3]
     else:
-        # as string
-        version = "%s.%s" % (v[0],v[1])
-        behind = "%s" % v[3]
+        # version as string, two or three parted
         if v[2] != "":
-            version = version + "-" + v[2]
-        if v[4] != "":
-            version = version + " (" + behind + ":" + v[4] + ")"
+            version = "%s.%s.%s" % (v[0],v[1],v[2])
+        else:
+            version = "%s.%s" % (v[0],v[1])
+        # append the optional beta tag
+        if v[3] != "":
+            version = version + "-" + v[3]
+        # append optional commit reference
+        behind = "%s" % v[4]
+        if v[5] != "":
+            version = version + " (" + behind + ":" + v[5] + ")"
         print version
     return 0
 
