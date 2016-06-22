@@ -19,20 +19,19 @@ from subprocess import CalledProcessError, check_output
 from optparse import OptionParser
 import re
 
-verbose = False
 beta_re = re.compile("[rvRV]?([0-9]+)\.([0-9]+)_([a-zA-Z0-9]+)-([0-9]+)-(.*)")
 final_re = re.compile("[rvRV]?([0-9]+)\.([0-9]+)-([0-9]+)-(.*)")
 beta_re3 = re.compile("[rvRV]?([0-9]+)\.([0-9]+)\.([0-9]+)_([a-zA-Z0-9]+)-([0-9]+)-(.*)")
 final_re3 = re.compile("[rvRV]?([0-9]+)\.([0-9]+)\.([0-9]+)-([0-9]+)-(.*)")
 
-def extract_version(curr_path):
+def extract_version(curr_path,verbose):
     git_base = ".git"
-    major = ""
-    minor = ""
-    patchlvl = ""
-    git_behind = ""
-    git_ref = ""
+    major = "0"
+    minor = "0"
+    patchlvl = "0"
     beta_tag = ""
+    git_behind = "0"
+    git_ref = ""
     if curr_path != "":
         git_base = curr_path + "/.git"
 
@@ -44,13 +43,17 @@ def extract_version(curr_path):
             cmd = "git describe --tags --always --dirty --long"
         if verbose:
             print "info: call:",cmd
+
         try:
             #version = check_output(cmd.split()).decode().strip()[len(PREFIX):]
             version = check_output(cmd.split())
             if verbose:
                 print "info: git returned",version
         except CalledProcessError:
-            raise RuntimeError("error: can't get tags from git")
+            if verbose:
+                print "error: can't get tags from git"
+            return [major,minor,patchlvl,beta_tag,git_behind,git_ref]
+
         m = beta_re3.match(version)
         if m != None:
             major = m.group(1)
@@ -85,7 +88,8 @@ def extract_version(curr_path):
     else:
         if verbose and (curr_path!=""):
             print "info: used working dir:",git_base
-        raise RuntimeError('no git root found!')
+        if verbose:
+            print "error: no git root found!"
 
     return [major,minor,patchlvl,beta_tag,git_behind,git_ref]
 
@@ -110,14 +114,13 @@ def main():
 
     # parse the options and set the global verbose flag too
     (options, args) = opt_parser.parse_args()
-    verbose = options.verbose
 
     # OK, let's do our job
     try:
-	v = extract_version(options.curr_path)
+	v = extract_version(options.curr_path,options.verbose)
     except:
-        print "fatal: something strange happened..."
-        return 1
+        print "fatal: extraction failed!"
+        v = ["0","0","0","","0",""]
 
     # proudly present the results. ;-)
     if options.verbose:
